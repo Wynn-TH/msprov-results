@@ -145,10 +145,18 @@ td:first-child,th:first-child{text-align:left}
   <p class="note">"补齐名单"单独用只有 +0.5（预注册判据没过：16 个场景只赢 7 个）；<b>但把补齐的名单交给 AI 挑，+1.0，成为新最优</b>。原因看下一张图。</p>
 </div>
 
-<!-- ═══════════ 4. 分场景 ═══════════ -->
+<!-- ═══════════ 4. 完整分组图 ═══════════ -->
 <div class="card">
-  <h2>④ 关键发现：同一份补齐的名单，谁来挑差别巨大</h2>
-  <p class="why">每根条 = 一个场景里加了"补齐名单"之后成功率的变化。左图由"预计耗时"规则挑，右图由 AI 挑。<b>看 50 台那一组：规则挑全下降，AI 挑全上升</b>——名单补齐没错，错的是按失真的耗时估计去挑。</p>
+  <h2>④ 完整分组对比图（五种做法 × 四种密度 × 四种服务器数，含误差棒）</h2>
+  <p class="why">四个面板 = 固定服务器 25 / 50 / 75 / 100 台；面板内横轴 = 车载服务器密度；<b>斜纹 = 开启了"补齐候选名单"</b>；误差棒 = 3 个随机种子的标准差。</p>
+  <img src="fa_grouped_bars.png" alt="分组柱状图：上排绝对成功率，下排相对现有方法的增益" style="width:100%;border-radius:6px;border:1px solid var(--ring)">
+  <p class="note"><b>为什么画成两排：</b>上排是绝对成功率，但服务器密度带来的差异（18%→79%）比五种做法之间的差异（0.5~3 个百分点）大一个数量级——<b>在上排，五种做法看起来一模一样</b>。下排画"相对现有已定稿方法的增益"，方法的差别才显出来：<b>看 50 台那一组，浅蓝斜纹（只补名单）四格全负，紫色斜纹（补名单 + AI 挑）四格全正。</b></p>
+</div>
+
+<!-- ═══════════ 5. 分场景（互动版） ═══════════ -->
+<div class="card">
+  <h2>⑤ 上图下排的互动版（悬停看精确数值）</h2>
+  <p class="why">同一份数据，可以逐格悬停。左图由"预计耗时"规则挑，右图由 AI 挑。<b>看 50 台那一组：规则挑全下降，AI 挑全上升</b>——名单补齐没错，错的是按失真的耗时估计去挑。</p>
   <div class="legend">
     <span class="key"><i style="background:var(--pos)"></i>提升</span>
     <span class="key"><i style="background:var(--neg)"></i>下降</span>
@@ -159,9 +167,9 @@ td:first-child,th:first-child{text-align:left}
   </div>
 </div>
 
-<!-- ═══════════ 5. 机理证据 ═══════════ -->
+<!-- ═══════════ 6. 机理证据 ═══════════ -->
 <div class="card">
-  <h2>⑤ 为什么确信是这个机制（而不是运气）</h2>
+  <h2>⑥ 为什么确信是这个机制（而不是运气）</h2>
   <div class="tiles">
     <div class="tile"><div class="lb">离线回放对账（重放昨天每个失败请求）</div><div class="v">100%</div><div class="d">7,812 / 7,812 与当时的真实决策逐一吻合</div></div>
     <div class="tile"><div class="lb">补齐名单后，每请求"可行收货点"数量</div><div class="v">48 → 59</div><div class="d"><b>+23%</b> — 名单确实变大了（机制生效）</div></div>
@@ -172,7 +180,7 @@ td:first-child,th:first-child{text-align:left}
 
 <!-- ═══════════ 表格 ═══════════ -->
 <div class="card">
-  <h2>⑥ 全部数字（表格视图）</h2>
+  <h2>⑦ 全部数字（表格视图）</h2>
   <details class="tbl" open><summary>16 场景 × 6 列成功率（%；每格为 3 个种子平均）</summary>
   <div id="tblWrap"></div></details>
   <p class="footer">数据：rlv3_data/audit_fa2_acc.csv、audit_fa3_acc.csv（成绩）；audit_fa_tier1.csv（下场构成）；audit_fa2_counterfactual.csv（回放）。
