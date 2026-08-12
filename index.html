@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>失败归因与补种实验 — 结果总览（2026-08-11 夜批次）</title>
+<style>
+.viz-root{
+  --surface-1:#fcfcfb; --page:#f9f9f7;
+  --ink-1:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+  /* 五种做法（固定顺序，勿改） */
+  --m-afs:#2a78d6; --m-cwfree:#1baf7a; --m-ddqn:#eda100; --m-cwseed:#008300; --m-ddqnseed:#4a3aa7;
+  /* 请求下场分段 */
+  --s-ok:#008300; --s-rej:#eda100; --s-dlv:#e34948; --s-up:#4a3aa7; --s-other:#c3c2b7;
+  /* 正负 */
+  --pos:#2a78d6; --neg:#e34948;
+  --good-text:#006300;
+}
+@media (prefers-color-scheme: dark){
+  .viz-root:not([data-theme=light]){
+    --surface-1:#1a1a19; --page:#0d0d0d;
+    --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+    --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+    --m-afs:#3987e5; --m-cwfree:#199e70; --m-ddqn:#c98500; --m-cwseed:#008300; --m-ddqnseed:#9085e9;
+    --s-ok:#008300; --s-rej:#c98500; --s-dlv:#e66767; --s-up:#9085e9; --s-other:#52514e;
+    --pos:#3987e5; --neg:#e66767;
+    --good-text:#0ca30c;
+  }
+}
+.viz-root[data-theme=dark]{
+  --surface-1:#1a1a19; --page:#0d0d0d;
+  --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --m-afs:#3987e5; --m-cwfree:#199e70; --m-ddqn:#c98500; --m-cwseed:#008300; --m-ddqnseed:#9085e9;
+  --s-ok:#008300; --s-rej:#c98500; --s-dlv:#e66767; --s-up:#9085e9; --s-other:#52514e;
+  --pos:#3987e5; --neg:#e66767;
+  --good-text:#0ca30c;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Noto Sans CJK SC",sans-serif}
+.viz-root{background:var(--page);color:var(--ink-1);padding:28px 16px;min-height:100vh}
+.wrap{max-width:1080px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:16px;margin:0 0 2px}
+.sub{color:var(--ink-2);font-size:13px;margin:0 0 20px}
+.card{background:var(--surface-1);border:1px solid var(--ring);border-radius:10px;padding:18px 20px;margin-bottom:18px}
+.card .why{color:var(--ink-2);font-size:13px;margin:2px 0 14px}
+.note{color:var(--ink-2);font-size:12.5px;margin-top:10px;line-height:1.55}
+.note b{color:var(--ink-1)}
+/* 名词卡 */
+.ladder{display:flex;flex-direction:column;gap:0}
+.rung{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid var(--grid)}
+.rung:last-child{border-bottom:none}
+.rung .swatch{width:14px;height:14px;border-radius:4px;margin-top:3px;flex:none}
+.rung .name{font-weight:600;font-size:14px}
+.rung .code{color:var(--ink-3);font-size:11.5px;font-weight:400;margin-left:6px}
+.rung .desc{color:var(--ink-2);font-size:13px;margin-top:1px;line-height:1.5}
+.rung .plus{color:var(--ink-3);font-size:12px;flex:none;width:52px;text-align:right;margin-top:2px}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;margin-left:8px;vertical-align:1px}
+.badge.win{background:var(--m-ddqnseed);color:#fff}
+.badge.old{background:var(--grid);color:var(--ink-2)}
+/* 图例 */
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:4px 0 12px;font-size:12.5px;color:var(--ink-2)}
+.legend .key{display:flex;align-items:center;gap:6px}
+.legend .key i{width:11px;height:11px;border-radius:3px;display:inline-block}
+/* 统计块 */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.tile{background:var(--surface-1);border:1px solid var(--ring);border-radius:10px;padding:14px 16px}
+.tile .lb{font-size:12.5px;color:var(--ink-2)}
+.tile .v{font-size:30px;font-weight:600;margin:2px 0}
+.tile .d{font-size:12px;color:var(--ink-2)}
+.tile .d b{color:var(--good-text)}
+svg{display:block}
+svg text{font-family:inherit}
+.tick{font-size:11px;fill:var(--ink-3)}
+.rowlab{font-size:12.5px;fill:var(--ink-1)}
+.rowlab2{font-size:11px;fill:var(--ink-3)}
+.vlab{font-size:11.5px;fill:var(--ink-2)}
+.vlab.em{font-weight:600;fill:var(--ink-1)}
+.grp{font-size:12px;font-weight:600;fill:var(--ink-2)}
+.mark{cursor:default}
+.mark:focus{outline:2px solid var(--pos);outline-offset:1px}
+/* tooltip */
+#tip{position:fixed;pointer-events:none;background:var(--surface-1);color:var(--ink-1);
+  border:1px solid var(--ring);border-radius:8px;padding:8px 11px;font-size:12.5px;
+  box-shadow:0 4px 14px rgba(0,0,0,.13);opacity:0;transition:opacity .12s;z-index:9;max-width:300px;line-height:1.5}
+#tip b{font-size:13px}
+#tip .muted{color:var(--ink-2)}
+details.tbl{margin-top:6px}
+details.tbl summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
+table{border-collapse:collapse;font-size:12px;margin-top:10px;width:100%}
+th,td{padding:4px 8px;text-align:right;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
+th{color:var(--ink-2);font-weight:600}
+td:first-child,th:first-child{text-align:left}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:840px){.grid2{grid-template-columns:1fr}}
+.footer{color:var(--ink-3);font-size:11.5px;margin-top:8px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="viz-root" id="root">
+<div class="wrap">
+
+<h1>一次请求为什么失败、五种做法各挣多少 — 结果总览</h1>
+<p class="sub">2026-08-11 夜间三个批次（144 + 144 + 144 次仿真）· 16 种场景 = 固定服务器 25/50/75/100 台 × 车载服务器密度 无/低/中/高 · 每格 3 个随机种子 · 每次仿真约 500 个请求，任务两种形状各半</p>
+
+<!-- ═══════════ 1. 名词表 ═══════════ -->
+<div class="card">
+  <h2>① 五种做法是什么 — 一个比一个多一层</h2>
+  <p class="why">每一行在上一行的基础上<b>只加一个机制</b>。代号是实验里的内部名字，括注在后面。</p>
+  <div class="ladder">
+    <div class="rung"><span class="plus">起点</span><span class="swatch" style="background:var(--m-afs)"></span>
+      <div><div class="name">基础搜索<span class="code">afs120</span></div>
+      <div class="desc">对每个请求试几百种放置组合，按"预计总耗时"挑最快的。<b>不考虑车会开走</b>——结果送回时车在哪，它不知道。</div></div></div>
+    <div class="rung"><span class="plus">+1</span><span class="swatch" style="background:var(--m-cwfree)"></span>
+      <div><div class="name">+ 预测车的位置<span class="code">cwfree120</span><span class="badge old">7 月定稿主结果</span></div>
+      <div class="desc">打分时加一项：预测结果算完时车大概开到哪一段路，罩不住车的方案要扣分。</div></div></div>
+    <div class="rung"><span class="plus">+2</span><span class="swatch" style="background:var(--m-ddqn)"></span>
+      <div><div class="name">+ AI 挑收货点<span class="code">ddqn</span><span class="badge old">昨晚之前的最优</span></div>
+      <div class="desc">搜索照旧，但"最后由哪台服务器把结果发回车上"这一个决定交给强化学习（它从真实成败中学过）。</div></div></div>
+    <div class="rung"><span class="plus">+3a</span><span class="swatch" style="background:var(--m-cwseed)"></span>
+      <div><div class="name">+ 补齐候选名单<span class="code">cwseed</span><span class="badge old">昨晚新增</span></div>
+      <div class="desc">回放发现：很多"够得着车"的服务器搜索压根没给它配出可行方案。此做法在搜索后强制补试这些服务器（挑的规则仍是"预计耗时"）。</div></div></div>
+    <div class="rung"><span class="plus">+3b</span><span class="swatch" style="background:var(--m-ddqnseed)"></span>
+      <div><div class="name">补齐名单 + AI 挑<span class="code">ddqnseed</span><span class="badge win">新的最优</span></div>
+      <div class="desc">名单补齐（+3a）之后，再让 AI 从这份更大的名单里挑收货点（+2）。两个新机制叠加。</div></div></div>
+  </div>
+</div>
+
+<!-- ═══════════ 2. 请求下场 ═══════════ -->
+<div class="card">
+  <h2>② 一个请求会有什么下场（占全部请求的百分比）</h2>
+  <p class="why">这是昨晚第一个实验回答的问题：失败到底由什么构成。看"预测位置"那行——它把"门口拒绝"从 13.8% 压到 2.3%，但其中大部分变成了"结果送不回来"（25.9%→36.0%），只有约 2 个百分点变成成功。<b>送不回来 = 唯一的大头，也是规划层唯一能攻的地方。</b></p>
+  <div class="legend" id="lgComp"></div>
+  <div id="chComp"></div>
+  <p class="note">"其他" = 迟到 + 服务器执行失败，合计不到 1% —— <b>资源不够根本不是瓶颈</b>。"没发出去" = 车发请求那一刻不在任何服务器覆盖内，属物理层，规划改不了。</p>
+</div>
+
+<!-- ═══════════ 3. 总成绩 ═══════════ -->
+<div class="card">
+  <h2>③ 五种做法的总成绩（16 种场景平均成功率）</h2>
+  <p class="why">成功率 = 按时送回车上的请求 ÷ 全部发出的请求。</p>
+  <div id="chDot"></div>
+  <p class="note">"补齐名单"单独用只有 +0.5（预注册判据没过：16 个场景只赢 7 个）；<b>但把补齐的名单交给 AI 挑，+1.0，成为新最优</b>。原因看下一张图。</p>
+</div>
+
+<!-- ═══════════ 4. 分场景 ═══════════ -->
+<div class="card">
+  <h2>④ 关键发现：同一份补齐的名单，谁来挑差别巨大</h2>
+  <p class="why">每根条 = 一个场景里加了"补齐名单"之后成功率的变化。左图由"预计耗时"规则挑，右图由 AI 挑。<b>看 50 台那一组：规则挑全下降，AI 挑全上升</b>——名单补齐没错，错的是按失真的耗时估计去挑。</p>
+  <div class="legend">
+    <span class="key"><i style="background:var(--pos)"></i>提升</span>
+    <span class="key"><i style="background:var(--neg)"></i>下降</span>
+  </div>
+  <div class="grid2">
+    <div><h2 style="font-size:13.5px;color:var(--ink-2);font-weight:600">补齐名单，规则挑 <span class="code">cwseed − cwfree120</span></h2><div id="chD1"></div></div>
+    <div><h2 style="font-size:13.5px;color:var(--ink-2);font-weight:600">补齐名单，AI 挑 <span class="code">ddqnseed − ddqn</span></h2><div id="chD2"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════ 5. 机理证据 ═══════════ -->
+<div class="card">
+  <h2>⑤ 为什么确信是这个机制（而不是运气）</h2>
+  <div class="tiles">
+    <div class="tile"><div class="lb">离线回放对账（重放昨天每个失败请求）</div><div class="v">100%</div><div class="d">7,812 / 7,812 与当时的真实决策逐一吻合</div></div>
+    <div class="tile"><div class="lb">补齐名单后，每请求"可行收货点"数量</div><div class="v">48 → 59</div><div class="d"><b>+23%</b> — 名单确实变大了（机制生效）</div></div>
+    <div class="tile"><div class="lb">回放挑出的"必定翻转"案例</div><div class="v">3 / 3</div><div class="d">补齐名单后全部翻转到回放预测的那台服务器</div></div>
+  </div>
+  <p class="note">回放还测出：被漏掉的服务器 99.7% 一直就在搜索的选项表里（不是被过滤掉）；"送不回来"里真正谁也救不了的只占全部请求的 1.4%，且只存在于"25 台 + 无车载"这一种最稀疏的场景。</p>
+</div>
+
+<!-- ═══════════ 表格 ═══════════ -->
+<div class="card">
+  <h2>⑥ 全部数字（表格视图）</h2>
+  <details class="tbl" open><summary>16 场景 × 6 列成功率（%；每格为 3 个种子平均）</summary>
+  <div id="tblWrap"></div></details>
+  <p class="footer">数据：rlv3_data/audit_fa2_acc.csv、audit_fa3_acc.csv（成绩）；audit_fa_tier1.csv（下场构成）；audit_fa2_counterfactual.csv（回放）。
+  批次：fa（归因）/ fa2（回放数据）/ fa3（补种验证），2026-08-11，harris 192 核。固定车速档 sf10；Chain 与 ForkJoin 两种任务形状在每次仿真内各半。
+  "基础搜索 / 预测位置 / AI 挑"来自 fa2 批，"补齐名单"两列来自 fa3 批（两批共有的"预测位置"列相差 0.08，跨批可比）。</p>
+</div>
+
+</div>
+<div id="tip"></div>
+<script>
+const CELLS=["S25_M0","S25_MLow","S25_MMedium","S25_MHigh","S50_M0","S50_MLow","S50_MMedium","S50_MHigh","S75_M0","S75_MLow","S75_MMedium","S75_MHigh","S100_M0","S100_MLow","S100_MMedium","S100_MHigh"];
+const D={
+ afs:[17.88,23.84,25.13,33.06,58.74,55.89,51.88,54.23,65.26,64.04,63.44,63.17,72.65,74.09,71.36,68.95],
+ cwfree2:[24.87,25.79,25.53,31.98,60.75,60.0,56.52,61.36,63.04,65.92,63.44,64.78,77.09,74.14,75.27,74.4],
+ ddqn:[25.47,24.51,23.45,30.11,62.63,59.87,57.39,58.8,66.53,67.07,67.14,66.06,76.28,78.59,76.28,78.7],
+ cwfree3:[24.8,25.39,24.66,31.85,61.49,61.28,56.99,58.4,64.25,66.46,63.04,65.79,75.54,75.42,73.66,74.53],
+ cwseed:[24.4,27.0,26.55,31.05,60.89,60.07,55.58,57.66,64.11,66.26,64.45,65.05,76.08,77.24,77.15,77.89],
+ ddqnseed:[25.81,23.37,25.87,31.52,63.04,62.9,57.93,60.89,68.15,69.23,69.69,65.93,77.02,77.24,78.83,77.76]};
+const COMP=[
+ {name:"基础搜索",code:"afs120",ok:54.20,rej:13.83,dlv:25.92,up:5.14,other:0.91},
+ {name:"+ 预测车的位置",code:"cwfree120",ok:56.29,rej:2.26,dlv:36.01,up:4.43,other:1.01},
+ {name:"+ AI 挑收货点",code:"ddqn",ok:57.84,rej:2.22,dlv:34.51,up:4.50,other:0.94}];
+const SEG=[["ok","成功","--s-ok"],["rej","门口拒绝","--s-rej"],["dlv","结果送不回来","--s-dlv"],["up","请求没发出去","--s-up"],["other","其他","--s-other"]];
+const METH=[
+ {k:"afs",label:"基础搜索",code:"afs120",v:53.98,c:"--m-afs",src:"fa2 批"},
+ {k:"cwfree",label:"+ 预测车的位置",code:"cwfree120",v:56.5,c:"--m-cwfree",src:"fa2/fa3 两批 56.56 / 56.47"},
+ {k:"ddqn",label:"+ AI 挑收货点",code:"ddqn",v:57.43,c:"--m-ddqn",src:"fa2 批"},
+ {k:"cwseed",label:"+ 补齐候选名单",code:"cwseed",v:56.96,c:"--m-cwseed",src:"fa3 批"},
+ {k:"ddqnseed",label:"补齐名单 + AI 挑",code:"ddqnseed",v:58.45,c:"--m-ddqnseed",src:"fa3 批",win:true}];
+const cellLabel=c=>{const m=c.match(/^S(\d+)_M(\w+)$/);const den={"0":"无车载","Low":"低","Medium":"中","High":"高"}[m[2]];return `${m[1]} 台 · ${den}`};
+const css=v=>getComputedStyle(document.getElementById('root')).getPropertyValue(v).trim();
+const tip=document.getElementById('tip');
+function showTip(html,x,y){tip.innerHTML=html;tip.style.opacity=1;
+  const w=tip.offsetWidth,h=tip.offsetHeight;
+  tip.style.left=Math.min(x+14,innerWidth-w-8)+"px";
+  tip.style.top=(y-h-12<8? y+16 : y-h-12)+"px";}
+function hideTip(){tip.style.opacity=0}
+function bindTip(el,html){
+  el.addEventListener('mousemove',e=>showTip(html,e.clientX,e.clientY));
+  el.addEventListener('mouseleave',hideTip);
+  el.setAttribute('tabindex','0');
+  el.addEventListener('focus',()=>{const r=el.getBoundingClientRect();showTip(html,r.left+r.width/2,r.top)});
+  el.addEventListener('blur',hideTip);
+}
+const NS="http://www.w3.org/2000/svg";
+const E=(t,a)=>{const n=document.createElementNS(NS,t);for(const k in a)n.setAttribute(k,a[k]);return n};
+
+/* ── ② 构成:堆叠横条 ── */
+(function(){
+  const W=1010,LW=170,PW=W-LW-30,BH=22,GAP=2,RH=46,H=COMP.length*RH+26;
+  const svg=E('svg',{viewBox:`0 0 ${W} ${H}`,width:"100%","aria-label":"请求下场构成"});
+  for(const t of [0,25,50,75,100]){
+    const x=LW+t/100*PW;
+    svg.appendChild(E('line',{x1:x,y1:6,x2:x,y2:H-20,stroke:css('--grid'),'stroke-width':1}));
+    const tx=E('text',{x:x,y:H-6,'text-anchor':'middle','class':'tick'});tx.textContent=t+"%";svg.appendChild(tx);
+  }
+  COMP.forEach((row,i)=>{
+    const y=10+i*RH;
+    const nm=E('text',{x:0,y:y+10,'class':'rowlab'});nm.textContent=row.name;svg.appendChild(nm);
+    const cd=E('text',{x:0,y:y+24,'class':'rowlab2'});cd.textContent=row.code;svg.appendChild(cd);
+    let acc=0;
+    SEG.forEach(([k,lab,cv])=>{
+      const v=row[k],x=LW+acc/100*PW,w=Math.max(0,v/100*PW-GAP);
+      const r=E('rect',{x:x,y:y,width:w,height:BH,fill:css(cv),rx:2,'class':'mark'});
+      svg.appendChild(r);
+      bindTip(r,`<b>${row.name}</b> <span class="muted">${row.code}</span><br>${lab}：<b>${v.toFixed(1)}%</b>`);
+      if(v>=8){const tl=E('text',{x:x+w/2,y:y+BH/2+4,'text-anchor':'middle','font-size':'11px',fill:'#fff','pointer-events':'none'});tl.textContent=v.toFixed(1);svg.appendChild(tl);}
+      acc+=v;
+    });
+  });
+  document.getElementById('chComp').appendChild(svg);
+  const lg=document.getElementById('lgComp');
+  SEG.forEach(([k,lab,cv])=>{const s=document.createElement('span');s.className='key';
+    s.innerHTML=`<i style="background:var(${cv})"></i>${lab}`;lg.appendChild(s);});
+})();
+
+/* ── ③ 总成绩:点图 ── */
+(function(){
+  const W=1010,LW=230,PW=W-LW-90,RH=34,H=METH.length*RH+40,MIN=52,MAX=60;
+  const X=v=>LW+(v-MIN)/(MAX-MIN)*PW;
+  const svg=E('svg',{viewBox:`0 0 ${W} ${H}`,width:"100%","aria-label":"总成绩点图"});
+  for(let t=MIN;t<=MAX;t+=2){
+    svg.appendChild(E('line',{x1:X(t),y1:6,x2:X(t),y2:H-24,stroke:css('--grid'),'stroke-width':1}));
+    const tx=E('text',{x:X(t),y:H-8,'text-anchor':'middle','class':'tick'});tx.textContent=t+"%";svg.appendChild(tx);
+  }
+  METH.forEach((m,i)=>{
+    const y=16+i*RH;
+    const nm=E('text',{x:0,y:y+4,'class':'rowlab',...(m.win?{'font-weight':'600'}:{})});nm.textContent=m.label;svg.appendChild(nm);
+    const cd=E('text',{x:0,y:y+17,'class':'rowlab2'});cd.textContent=m.code;svg.appendChild(cd);
+    svg.appendChild(E('line',{x1:X(MIN),y1:y,x2:X(m.v),y2:y,stroke:css('--grid'),'stroke-width':1}));
+    const dot=E('circle',{cx:X(m.v),cy:y,r:7,fill:css(m.c),stroke:css('--surface-1'),'stroke-width':2,'class':'mark'});
+    svg.appendChild(dot);
+    bindTip(dot,`<b>${m.label}</b> <span class="muted">${m.code}</span><br>平均成功率 <b>${m.v}%</b><br><span class="muted">${m.src}</span>`);
+    const vl=E('text',{x:X(m.v)+13,y:y+4,'class':m.win?'vlab em':'vlab'});
+    vl.textContent=m.v.toFixed(1)+"%"+(m.win?"（新最优）":"");svg.appendChild(vl);
+  });
+  document.getElementById('chDot').appendChild(svg);
+})();
+
+/* ── ④ 分场景 Δ:双联对比 ── */
+function deltaPanel(el,a,b,batchNote){
+  const W=500,LW=118,PW=W-LW-56,RH=21,GRPGAP=16;
+  const rows=CELLS.map((c,i)=>({c,d:+(D[a][i]-D[b][i]).toFixed(2)}));
+  const MAXA=4.0;
+  const H=CELLS.length*RH+3*GRPGAP+30;
+  const X=v=>LW+(v+MAXA)/(2*MAXA)*PW;
+  const svg=E('svg',{viewBox:`0 0 ${W} ${H}`,width:"100%","aria-label":"分场景变化"});
+  for(const t of [-4,-2,0,2,4]){
+    svg.appendChild(E('line',{x1:X(t),y1:4,x2:X(t),y2:H-22,stroke:t===0?css('--axis'):css('--grid'),'stroke-width':1}));
+    const tx=E('text',{x:X(t),y:H-8,'text-anchor':'middle','class':'tick'});tx.textContent=(t>0?"+":"")+t;svg.appendChild(tx);
+  }
+  let y=8,grp="";
+  rows.forEach((r)=>{
+    const g=r.c.split("_")[0];
+    if(g!==grp){grp=g;
+      const gl=E('text',{x:0,y:y+12,'class':'grp'});gl.textContent=g.slice(1)+" 台";svg.appendChild(gl);
+      y+=GRPGAP;}
+    const lab=E('text',{x:LW-8,y:y+11,'text-anchor':'end','class':'rowlab2'});
+    lab.textContent=cellLabel(r.c).split("·")[1].trim();svg.appendChild(lab);
+    const w=Math.abs(r.d)/(2*MAXA)*PW;
+    const rect=E('rect',{x:r.d>=0?X(0):X(0)-w,y:y+2,width:Math.max(w,1),height:13,
+      fill:css(r.d>=0?'--pos':'--neg'),rx:2,'class':'mark'});
+    svg.appendChild(rect);
+    bindTip(rect,`<b>${cellLabel(r.c)}</b><br>变化 <b>${r.d>0?"+":""}${r.d} 个百分点</b><br><span class="muted">${batchNote}</span>`);
+    if(Math.abs(r.d)>=1.4){
+      const vl=E('text',{x:r.d>=0?X(0)+w+4:X(0)-w-4,y:y+12,'text-anchor':r.d>=0?'start':'end','class':'vlab'});
+      vl.textContent=(r.d>0?"+":"")+r.d.toFixed(1);svg.appendChild(vl);}
+    y+=RH;
+  });
+  document.getElementById(el).appendChild(svg);
+}
+deltaPanel('chD1','cwseed','cwfree3','同一批（fa3）内配对比较');
+deltaPanel('chD2','ddqnseed','ddqn','跨批比较（共有对照列相差 0.08，可比）');
+
+/* ── ⑥ 表格 ── */
+(function(){
+  const cols=[["afs","基础搜索"],["cwfree2","+预测位置"],["ddqn","+AI 挑"],["cwfree3","+预测位置(fa3)"],["cwseed","+补齐名单"],["ddqnseed","补齐+AI"]];
+  let h="<table><thead><tr><th>场景（服务器 · 车载密度）</th>";
+  cols.forEach(([k,l])=>h+=`<th>${l}</th>`);h+="</tr></thead><tbody>";
+  CELLS.forEach((c,i)=>{
+    h+=`<tr><td>${cellLabel(c)}</td>`;
+    cols.forEach(([k])=>{
+      const best=Math.max(...cols.map(([kk])=>D[kk][i]));
+      const v=D[k][i];
+      h+=`<td${v===best?' style="font-weight:600"':''}>${v.toFixed(1)}</td>`;});
+    h+="</tr>";});
+  h+="<tr><td><b>平均</b></td>";
+  cols.forEach(([k])=>{const m=D[k].reduce((a,b)=>a+b,0)/16;h+=`<td><b>${m.toFixed(2)}</b></td>`;});
+  h+="</tr></tbody></table>";
+  document.getElementById('tblWrap').innerHTML=h;
+})();
+
+if(location.hash==="#dark")document.getElementById('root').dataset.theme="dark";
+if(location.hash==="#light")document.getElementById('root').dataset.theme="light";
+</script>
+</div>
+</body>
+</html>
