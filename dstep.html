@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>让 AI 管多少事 — 四种做法的对比结果</title>
+<style>
+.viz-root{
+  --surface-1:#fcfcfb; --page:#f9f9f7;
+  --ink-1:#0b0b0b; --ink-2:#52514e; --ink-3:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --m-base:#2a78d6; --m-geo:#1baf7a; --m-whole:#eda100; --m-final:#4a3aa7;
+  --neg:#e34948; --pos:#2a78d6;
+  --good-text:#006300;
+}
+@media (prefers-color-scheme: dark){ .viz-root:not([data-theme=light]){
+  --surface-1:#1a1a19; --page:#0d0d0d; --ink-1:#fff; --ink-2:#c3c2b7; --ink-3:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --m-base:#3987e5; --m-geo:#199e70; --m-whole:#c98500; --m-final:#9085e9;
+  --neg:#e66767; --pos:#3987e5; --good-text:#0ca30c; } }
+.viz-root[data-theme=dark]{
+  --surface-1:#1a1a19; --page:#0d0d0d; --ink-1:#fff; --ink-2:#c3c2b7; --ink-3:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --m-base:#3987e5; --m-geo:#199e70; --m-whole:#c98500; --m-final:#9085e9;
+  --neg:#e66767; --pos:#3987e5; --good-text:#0ca30c; }
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI","Noto Sans CJK SC",sans-serif}
+.viz-root{background:var(--page);color:var(--ink-1);padding:28px 16px;min-height:100vh}
+.wrap{max-width:1020px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:16px;margin:0 0 2px}
+.sub{color:var(--ink-2);font-size:13px;margin:0 0 20px;line-height:1.6}
+.card{background:var(--surface-1);border:1px solid var(--ring);border-radius:10px;padding:18px 20px;margin-bottom:18px}
+.why{color:var(--ink-2);font-size:13px;margin:2px 0 14px;line-height:1.6}
+.note{color:var(--ink-2);font-size:12.5px;margin-top:12px;line-height:1.6}
+.note b{color:var(--ink-1)}
+.warn{border-left:3px solid var(--neg);padding-left:12px;margin-top:14px}
+.warn b{color:var(--neg)}
+.rung{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--grid)}
+.rung:last-child{border-bottom:none}
+.rung .sw{width:14px;height:14px;border-radius:4px;margin-top:3px;flex:none}
+.rung .nm{font-weight:600;font-size:14px}
+.rung .cd{color:var(--ink-3);font-size:11.5px;font-weight:400;margin-left:6px}
+.rung .ds{color:var(--ink-2);font-size:13px;margin-top:2px;line-height:1.55}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;margin-left:8px}
+.badge.win{background:var(--m-final);color:#fff}
+.badge.new{background:var(--m-whole);color:#3a2800}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.tile{border:1px solid var(--ring);border-radius:10px;padding:14px 16px}
+.tile .lb{font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.tile .v{font-size:29px;font-weight:600;margin:4px 0}
+.tile .d{font-size:12px;color:var(--ink-2);line-height:1.5}
+svg{display:block}
+svg text{font-family:inherit}
+.tick{font-size:11px;fill:var(--ink-3)}
+.rl{font-size:12.5px;fill:var(--ink-1)}
+.rl2{font-size:11px;fill:var(--ink-3)}
+.vl{font-size:12px;fill:var(--ink-2)}
+.vl.em{font-weight:600;fill:var(--ink-1)}
+.mark{cursor:default}
+.mark:focus{outline:2px solid var(--pos);outline-offset:2px}
+#tip{position:fixed;pointer-events:none;background:var(--surface-1);color:var(--ink-1);
+ border:1px solid var(--ring);border-radius:8px;padding:8px 11px;font-size:12.5px;
+ box-shadow:0 4px 14px rgba(0,0,0,.13);opacity:0;transition:opacity .12s;z-index:9;max-width:300px;line-height:1.5}
+table{border-collapse:collapse;font-size:12.5px;margin-top:10px;width:100%}
+th,td{padding:5px 9px;text-align:right;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
+th{color:var(--ink-2);font-weight:600}
+td:first-child,th:first-child{text-align:left}
+.matrix td,.matrix th{text-align:center}
+.matrix td:first-child{text-align:left;color:var(--ink-2)}
+.hi{font-weight:600;font-size:15px}
+.footer{color:var(--ink-3);font-size:11.5px;margin-top:10px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="viz-root" id="root"><div class="wrap">
+
+<h1>让 AI 管多少事 — 四种做法的对比</h1>
+<p class="sub">这次实验只回答一个问题:<b>把放置决定交给 AI,应该交多少?</b>
+一个任务由 3 个微服务组成(X→Y→Z),要决定每个放在哪台服务器上跑;跑 Z 的那台负责把结果发回给正在开的车。
+所有数字来自同一场景(50 台固定服务器 + 中等车载密度)× 3 个随机种子,由 Kimi K3 独立重算。</p>
+
+<!-- ① 名词 -->
+<div class="card">
+  <h2>① 四种做法分别是什么</h2>
+  <p class="why">差别只在<b>谁来做哪些决定</b>。代号是实验内部名字,写在后面。</p>
+  <div>
+    <div class="rung"><span class="sw" style="background:var(--m-base)"></span><div>
+      <div class="nm">全部由搜索决定<span class="cd">afs120</span></div>
+      <div class="ds">三步都由传统搜索算法定:随机试几百种组合,按"预计总耗时"挑最快的。<b>不用 AI。</b></div></div></div>
+    <div class="rung"><span class="sw" style="background:var(--m-geo)"></span><div>
+      <div class="nm">搜索 + 预测车的位置<span class="cd">cwfree120</span><span class="badge" style="background:var(--grid);color:var(--ink-2)">7月定稿主结果</span></div>
+      <div class="ds">仍然三步都由搜索定,但打分时多算一项:结果算完时车大概开到哪,罩不住车的方案扣分。<b>仍不用 AI。</b></div></div></div>
+    <div class="rung"><span class="sw" style="background:var(--m-whole)"></span><div>
+      <div class="nm">三步全交给 AI<span class="cd">ddqn-step</span><span class="badge new">本次新做的</span></div>
+      <div class="ds">AI 逐个决定 X、Y、Z 各放哪台。搜索退居兜底:AI 给的方案不可行时才接手。</div></div></div>
+    <div class="rung"><span class="sw" style="background:var(--m-final)"></span><div>
+      <div class="nm">只有最后一步交给 AI<span class="cd">ddqn</span><span class="badge win">最优</span></div>
+      <div class="ds">前两步照旧由搜索定,<b>只有"结果由哪台服务器发回车上"这一个决定</b>交给 AI。</div></div></div>
+  </div>
+</div>
+
+<!-- ② 成绩 -->
+<div class="card">
+  <h2>② 成绩:成功率(按时送回车上的请求占比)</h2>
+  <p class="why">同一场景、同样三个随机种子。横轴从 50% 起,因为四者都在 55% 以上,从 0 起会看不出差别。</p>
+  <div id="chDot"></div>
+  <p class="note">把 AI 从"只管一步"扩大到"管三步",成功率<b>掉了 7.9 个百分点</b>——
+  比"完全不用 AI 但会预测车位置"的做法(59.4)还低。</p>
+</div>
+
+<!-- ③ 消融 -->
+<div class="card">
+  <h2>③ 这次实验真正要回答的问题</h2>
+  <p class="why">之前只知道"PPO 全包输了",但输在<b>算法不行</b>还是<b>管得太宽</b>,分不清——因为那次只有一个数据点。
+  这次补上"同一个 AI 算法(DDQN)全包"这一格,两个变量才能分开。</p>
+  <table class="matrix"><thead><tr><th>AI 算法</th><th>只管最后一步</th><th>管全部三步</th></tr></thead>
+  <tbody>
+    <tr><td>PPO</td><td style="color:var(--ink-3)">没测过</td><td>56.5</td></tr>
+    <tr><td><b>DDQN</b></td><td class="hi" style="color:var(--m-final)">66.2</td><td class="hi" style="color:var(--m-whole)">58.33</td></tr>
+  </tbody></table>
+  <div id="chAbl"></div>
+  <p class="note"><b>结论:同一个算法,只改管辖范围,掉 7.9 分;固定范围换算法,只差 1.8 分。</b>
+  决定成败的是<b>管多宽</b>,不是<b>用哪个算法</b>——这正是"搜索管前两步、AI 管最后一步"这个分工的独立证据。</p>
+</div>
+
+<!-- ④ 保留 -->
+<div class="card">
+  <h2>④ 但这个 58.33 有一半不是 AI 挣的</h2>
+  <div class="tiles">
+    <div class="tile" style="border-color:var(--neg)">
+      <div class="lb">AI 给出的方案不可行、被搜索兜底救回的比例</div>
+      <div class="v" style="color:var(--neg)">43.75%</div>
+      <div class="d">这批没开决策日志,<b>拆不出"纯 AI 值多少"</b></div></div>
+    <div class="tile">
+      <div class="lb">请求真的到达了 AI(不是全程走兜底)</div>
+      <div class="v" style="color:var(--good-text)">99.4%</div>
+      <div class="d">1479/1488,每条恰好 3 次决策 — K3 已验证</div></div>
+    <div class="tile">
+      <div class="lb">三个随机种子的散布</div>
+      <div class="v">6.9<span style="font-size:16px">pp</span></div>
+      <div class="d">62.30 / 57.26 / 55.44 — 跨过了两条基线,单个种子不可用</div></div>
+  </div>
+  <div class="warn"><b>所以 58.33 只能说成"AI + 搜索兜底这个组合的成绩",不能说成"全包 AI 的能力"。</b>
+  下一批必须开决策日志才能拆开。</div>
+</div>
+
+<!-- ⑤ 判据 -->
+<div class="card">
+  <h2>⑤ 判读(判据在实验开始前就锁死了,事后没改)</h2>
+  <table><thead><tr><th>判据</th><th>门槛</th><th>结果</th></tr></thead><tbody>
+    <tr><td>主判据:不低于纯搜索</td><td>≥ 57.0</td><td style="color:var(--good-text);font-weight:600">✓ 过(58.33)</td></tr>
+    <tr><td>强判据:不低于"搜索+预测位置"</td><td>≥ 59.4</td><td style="color:var(--neg);font-weight:600">✗ 未过</td></tr>
+    <tr><td>与"只管最后一步"的差距</td><td>—</td><td style="font-weight:600">−7.9</td></tr>
+    <tr><td>实验前写下的预测区间</td><td>56.5 ~ 62</td><td style="color:var(--good-text)">✓ 命中</td></tr>
+  </tbody></table>
+  <p class="note">落在预注册判读表的第二行:<b>"全包可行,但明显劣于分工方案"</b>。</p>
+</div>
+
+<div class="card">
+  <h2>⑥ 一个影响其他结论的发现</h2>
+  <p class="why">K3 审计时发现:仿真结束时,程序会把<b>所有还没等到结果的请求一次性记成失败</b>
+  (代码 <code>MSUserApp.cc:601-605</code>),而这个世界有 36–39% 的请求属于这一类。</p>
+  <p class="note">后果:训练过程中那个"送达率"指标<b>系统性偏低,只能看趋势、不能看数值</b>。
+  我之前汇报的"送达率 0.164 → 0.306"——<b>趋势成立(偏差每轮一样),但 0.306 不是准时率</b>,那样说不准确。
+  已在三处更正,权威成功率一律以仿真原始输出为准(即本页的 58.33)。</p>
+  <p class="footer">数据:K3 独立重算(rlv3_data/report/K3_DstepAudit_Report_20260812.md),三源一致(run.sca / UE 记录 / runs.csv)。
+  场景 MSW_path_sf10_p70_S50_MMedium_Chain,seeds 0-2,1200 秒仿真,冻结模型无探索。
+  判读文档 docs/DDQN_Stepwise_Results_20260813.md,预注册 docs/DDQN_Stepwise_Prereg_20260812.md。</p>
+</div>
+
+</div><div id="tip"></div>
+<script>
+const M=[
+ {k:"base",  label:"全部由搜索决定",        code:"afs120",   v:57.0, c:"--m-base",  note:"基线,不用 AI"},
+ {k:"geo",   label:"搜索 + 预测车的位置",   code:"cwfree120",v:59.4, c:"--m-geo",   note:"7 月定稿主结果,仍不用 AI"},
+ {k:"whole", label:"三步全交给 AI",         code:"ddqn-step",v:58.33,c:"--m-whole", note:"本次新做;含 43.75% 搜索兜底"},
+ {k:"final", label:"只有最后一步交给 AI",   code:"ddqn",     v:66.2, c:"--m-final", note:"最优", win:true}];
+const css=v=>getComputedStyle(document.getElementById('root')).getPropertyValue(v).trim();
+const tip=document.getElementById('tip');
+function show(h,x,y){tip.innerHTML=h;tip.style.opacity=1;const w=tip.offsetWidth,ht=tip.offsetHeight;
+ tip.style.left=Math.min(x+14,innerWidth-w-8)+"px";tip.style.top=(y-ht-12<8?y+16:y-ht-12)+"px";}
+function hide(){tip.style.opacity=0}
+function bind(el,h){el.addEventListener('mousemove',e=>show(h,e.clientX,e.clientY));
+ el.addEventListener('mouseleave',hide);el.setAttribute('tabindex','0');
+ el.addEventListener('focus',()=>{const r=el.getBoundingClientRect();show(h,r.left+r.width/2,r.top)});
+ el.addEventListener('blur',hide);}
+const NS="http://www.w3.org/2000/svg", E=(t,a)=>{const n=document.createElementNS(NS,t);for(const k in a)n.setAttribute(k,a[k]);return n};
+
+(function(){
+  const W=980,LW=250,PW=W-LW-110,RH=42,H=M.length*RH+42,MIN=50,MAX=70;
+  const X=v=>LW+(v-MIN)/(MAX-MIN)*PW;
+  const svg=E('svg',{viewBox:`0 0 ${W} ${H}`,width:"100%","aria-label":"四种做法成功率对比"});
+  for(let t=MIN;t<=MAX;t+=5){
+    svg.appendChild(E('line',{x1:X(t),y1:6,x2:X(t),y2:H-26,stroke:css('--grid'),'stroke-width':1}));
+    const x=E('text',{x:X(t),y:H-8,'text-anchor':'middle','class':'tick'});x.textContent=t+"%";svg.appendChild(x);}
+  M.forEach((m,i)=>{
+    const y=20+i*RH;
+    const nm=E('text',{x:0,y:y+4,'class':'rl',...(m.win?{'font-weight':'600'}:{})});nm.textContent=m.label;svg.appendChild(nm);
+    const cd=E('text',{x:0,y:y+18,'class':'rl2'});cd.textContent=m.code;svg.appendChild(cd);
+    svg.appendChild(E('line',{x1:X(MIN),y1:y,x2:X(m.v),y2:y,stroke:css('--grid'),'stroke-width':1}));
+    const d=E('circle',{cx:X(m.v),cy:y,r:7.5,fill:css(m.c),stroke:css('--surface-1'),'stroke-width':2,'class':'mark'});
+    svg.appendChild(d);
+    bind(d,`<b>${m.label}</b><br><span style="color:var(--ink-2)">${m.code}</span><br>成功率 <b>${m.v}%</b><br><span style="color:var(--ink-2)">${m.note}</span>`);
+    const vl=E('text',{x:X(m.v)+14,y:y+4,'class':m.win?'vl em':'vl'});
+    vl.textContent=m.v.toFixed(m.v%1?2:1)+"%";svg.appendChild(vl);});
+  document.getElementById('chDot').appendChild(svg);
+})();
+
+(function(){
+  const W=980,H=132,CX=180;
+  const svg=E('svg',{viewBox:`0 0 ${W} ${H}`,width:"100%","aria-label":"范围与算法的影响对比"});
+  const bars=[
+    {lb:"只改管辖范围（同一个 AI 算法 DDQN）",sub:"只管最后一步 66.2 → 管全部三步 58.33",v:7.9,c:'--neg'},
+    {lb:"只换算法（同样都管全部三步）",sub:"PPO 56.5 → DDQN 58.33",v:1.8,c:'--m-base'}];
+  const maxv=9, PW=W-CX-260;
+  bars.forEach((b,i)=>{
+    const y=26+i*54;
+    const t=E('text',{x:0,y:y+4,'class':'rl'});t.textContent=b.lb;svg.appendChild(t);
+    const s=E('text',{x:0,y:y+19,'class':'rl2'});s.textContent=b.sub;svg.appendChild(s);
+    const w=b.v/maxv*PW;
+    const r=E('rect',{x:CX+180,y:y-9,width:w,height:18,rx:3,fill:css(b.c),'class':'mark'});
+    svg.appendChild(r);
+    bind(r,`<b>${b.lb}</b><br>${b.sub}<br>影响 <b>${b.v} 个百分点</b>`);
+    const vl=E('text',{x:CX+180+w+9,y:y+5,'class':'vl em'});vl.textContent=b.v+" pp";svg.appendChild(vl);});
+  const cap=E('text',{x:CX+180,y:H-14,'class':'rl2'});
+  cap.textContent="↑ 条越长 = 这个因素对成绩的影响越大";svg.appendChild(cap);
+  document.getElementById('chAbl').appendChild(svg);
+})();
+
+if(location.hash==="#dark")document.getElementById('root').dataset.theme="dark";
+if(location.hash==="#light")document.getElementById('root').dataset.theme="light";
+</script>
+</div></body></html>

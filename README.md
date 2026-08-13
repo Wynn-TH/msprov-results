@@ -2,7 +2,8 @@
 
 MobiEdgeSim 微服务放置实验的结果可视化。**互动版在这里：**
 
-### 👉 https://wynn-th.github.io/msprov-results/
+### 👉 https://wynn-th.github.io/msprov-results/  — 失败归因与候选补种（08-11 批次）
+### 👉 https://wynn-th.github.io/msprov-results/dstep.html — 让 AI 管多少事（08-12 批次）
 
 （悬停任意柱/点看精确数值；底部有全部 16 场景的数字表格；跟随系统深浅色。）
 
